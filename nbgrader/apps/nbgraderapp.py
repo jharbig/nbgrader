@@ -27,6 +27,9 @@ from . import (
     ListApp,
     ExtensionApp,
     QuickStartApp,
+    StudentMailApp,
+    StudentgradeApp,
+    StudentResultApp,
     ExportApp
 )
 
@@ -190,6 +193,30 @@ class NbGraderApp(NbGrader):
                 """
                 Create an example class files directory with an example
                 config file and assignment.
+                """
+            ).strip()
+        ),
+        studentmail=(
+            StudentMailApp,
+            dedent(
+                """
+                Mails
+                """
+            ).strip()
+        ),
+        studentgrade=(
+            StudentgradeApp,
+            dedent(
+                """
+                Connects students identifier with assignments
+                """
+            ).strip()
+        ),
+        studentresult=(
+            StudentResultApp,
+            dedent(
+                """
+                Creates a JSON file with students identifier and their points in assignments.
                 """
             ).strip()
         ),
