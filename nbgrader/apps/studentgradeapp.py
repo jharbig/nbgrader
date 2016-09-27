@@ -2,7 +2,7 @@ from .baseapp import NbGrader
 import json
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy import Column, String, DateTime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import MetaData, Table
@@ -58,80 +58,157 @@ class StudentgradeApp(NbGrader):
     def start(self):
         super(StudentgradeApp, self).start()
 
-        if len(self.extra_args) != 2:
+        if len(self.extra_args) != 1:
             self.fail("Assignment id not provided. Usage: nbgrader studentgrade assinment_id")
-
-#TODO Path for Submited Notebooks, inclusiv accountname (from pathname)
-        notepath = [{"acc": "GP1_00_01", "file": "./B2_A1(1).ipynb"}]
-
+        self.session = init_database(db_url='sqlite:///gradebook.db')
         assignment = self.extra_args[0]
-        rootpath = ':/autograded'
-        notepath = get_notepath(assignment, rootpath)
+        rootpath = './autograded'
+        notepath = self.get_notepath(assignment, rootpath)
+        #print("notepath", notepath)
         for p in notepath:
             note = json.load(open(p["file"]))
             id_note = note["cells"][0]["source"]
             for st in id_note:
                 st = str.replace(st, "\n", "")
                 st = str.split(st, " ", 1)
+                assignment_id = self.get_assignment_id(assignment)
                 if len(st) > 1:
-                    self.save_identifier(st[0], p["acc"], assignment, st[1])
+                    self.save_identifier(st[0], p["acc"], assignment_id, st[1])
                 elif len(st) > 0:
-                    self.save_identifier(st[0], p["acc"], assignment)
+                    self.save_identifier(st[0], p["acc"], assignment_id)
+        self.session.commit()
+        gr = self.session.query(Groupmember).all()
+        print("len", len(gr))
+        for g in self.session.query(Groupmember).all():
+            print("saved ids", g)
 
-    def save_identifier(self, identifier, account, assignment, mail=""):
-        print("save id", identifier, account, assignment, mail)
-        #TODO write to DB
+    def save_identifier(self, identifier, account, assignment_id, mail=""):
+        """
+        Saves groupmeber entry to database. Database as to be connected with 'init_database'
+        :param identifier: unique identifier of each groupmember (like matrikel number)
+        :param account: name of the group account
+        :param assignment_id: id of assignment where the groubmembers shell be collected
+        :param mail: mail address of that groupmember (optional)
+        :return:
+        """
+        #print("save id:", identifier, account)
+        sub_ass = self.session.query(SubmittedAssignment).filter(
+                SubmittedAssignment.assignment_id == assignment_id,
+                SubmittedAssignment.student_id == account
+            ).first()
+        #print("sub_ass", sub_ass)
+        if sub_ass is not None:
+            if self.session.query(Groupmember).filter(
+                            Groupmember.sub_notebook_id == sub_ass.id,
+                            Groupmember.groupmember_id == identifier
+            ).first() is not None:
+                #print("exists", identifier, sub_ass.id)
+                return
+            new_mem = Groupmember(sub_notebook_id=sub_ass.id, groupmember_id=identifier, mail=mail)
+            self.session.add(new_mem)
 
-    def init_database(self):
-        db_url = 'sqlite:///gradebook.db'
-        #TODO mode_debug = False
-        mode_debug = True
-        Session = sessionmaker(bind=engine)
-        self.session = Session()
 
-        #Add table 'groupmember' if not exist
-        metadata = MetaData()
-        groupemember = Table('groupmember', metadata,
-                             Column('sub_notebook_id', String, primary_key=True),
-                             Column('groupmember_id', String),
-                             Column('mail', String)
-        )
-        metadata.create_all(engine)
 
     def get_notepath(self, assignment, root_path):
+        """
+        :param assignment: assignment name
+        :param root_path: path of folder were the accounts have their sub folders
+        :return: a list of dicts with each two entry
+            'acc': name of the student account
+            'file': path of the notebook file where the students have written the identifier
+                    and mail addresses of all group members of in that assignment
+        """
         res = []
         for p in os.listdir(root_path):
-            if os.path.isdir(p):
+
+            #if os.path.isdir(p):
                 np = dict()
                 np['acc'] = p
                 assignment_dir = os.path.join(root_path, p, assignment)
+                #print("assignment_dir", assignment_dir)
                 if os.path.exists(assignment_dir):
                     for f in os.listdir(assignment_dir):
                         if f.rfind('.ipynb') != -1:
                             np['file'] = os.path.join(assignment_dir, f)
                             break
+                    #print("notepath np:", np)
                     res += [np]
         return res
 
+    def get_assignment_id(self, assignment_name):
+        """
+        Database has to be connected with 'init_database'
+        :param assignment_name:
+        :return: assignment id from database
+        """
+        return self.session.query(Assignment.id).filter(Assignment.name == assignment_name).first()[0]
+
 
 Base = declarative_base()
+
+def init_database(db_url):
+    """
+    Initialise the database:
+    Connect to database with given url
+    creates new table 'groupmember' if not exists
+    saves current session to 'self.session'
+    :return:
+    """
+    #TODO mode_debug = False
+    mode_debug = True
+    engine = create_engine(db_url, echo=mode_debug)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    #Add table 'groupmember' if not exist
+    metadata = MetaData()
+    groupemember = Table('groupmember', metadata,
+                         Column('sub_notebook_id', String, primary_key=True),
+                         Column('groupmember_id', String, primary_key=True),
+                         Column('mail', String)
+    )
+    metadata.create_all(engine)
+    return session
+
+
 class Groupmember(Base):
+    """
+    Class for sqlalchemie to access the database
+    """
     __tablename__ = 'groupmember'
 
     sub_notebook_id = Column(String, primary_key=True)
-    groupmember_id = Column(String)
+    groupmember_id = Column(String, primary_key=True)
     mail = Column(String)
 
     def __repr__(self):
-        return "<Groupmeber(identifier='%s', notebook=%s, mail='%s'" % (self.groupmember_id, self.sub_notebook_id, self.mail)
+        return "<Groupmeber(identifier='%s', notebook=%s, mail='%s'" \
+               % (self.groupmember_id, self.sub_notebook_id, self.mail)
 
-class Student(Base):
-    __tablename__ = 'student'
+
+class Assignment(Base):
+    """
+    Class for sqlalchemie to access the database
+    """
+    __tablename__ = 'assignment'
 
     id = Column(String, primary_key=True)
-    first_name = Column(String)
-    last_name = Column(String)
-    email = Column(String)
+    name = Column(String)
+    duedate = Column(DateTime)
+
+
+class SubmittedAssignment(Base):
+    """
+    Class for sqlalchemie to access the database
+    """
+    __tablename__ = 'submitted_assignment'
+
+    id = Column(String, primary_key=True)
+    assignment_id = Column(String)
+    student_id = Column(String)
+    timestamp = Column(DateTime)
+    extension = Column(DateTime)
 
     def __repr__(self):
-        return "<Student(id='%s', name='%s, %s')>" % (self.id, self.first_name, self.last_name)
+        return "<SubmittedAssignment(id='%s', assignment_id='%s', studnet_id='%s', timestamp='%s', extension='%s')" \
+               % (self.id, self.assignment_id, self.student_id, self.timestamp, self.extension)
