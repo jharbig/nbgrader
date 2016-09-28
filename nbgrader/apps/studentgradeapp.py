@@ -21,7 +21,13 @@ class StudentgradeApp(NbGrader):
     flags = flags
 
     examples = """
-        You can run `nbgrader studentgrade` just in the course folder.
+        Studentgrade connects the submitted assignments to the students that worked in a group.
+        Each group has one group account. They must write the identifier and mail addresses in
+        the first notebook cell.
+
+        You can run `nbgrader studentgrade` just in the top-level course folder.
+        This command must be run after ´nbgrader autograde assignment01´.
+
         To connect the students identifier (written by the students in the first cell of the
         collected notebook with syntax:
 
@@ -31,7 +37,7 @@ class StudentgradeApp(NbGrader):
                 .
                 .
 
-        ) for their submittions on asignment01 run:
+        ) for their submissions on asignment01 run:
 
             nbgrader studentgrade asignment01
 

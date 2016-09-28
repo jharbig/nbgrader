@@ -7,14 +7,24 @@ flags = {}
 class StudentMailApp(NbGrader):
 
     name = u'nbgrader-studentmail'
-    description = u'Send mails with results to given mailadress from student'
+    description = u'Send mails with results to given mail addresses from students'
 
     aliases = aliases
     flags = flags
 
     examples = """
-        Here should be an example for studentmail
+        Sends mails to students to give them results to an assignment
 
+        This command is running from the top-level folder of the course.
+        This command must run after ´nbgrader studentgrade assignment01´
+
+        For example
+
+            nbgrader studentmail assignment01´
+
+        to mail all students, who submitted an assignment of assignment01, a mail
+        with their results.
+        For example mail to ´studnet@mail.upb.de´: ´Matrikel Nr: 1234567, Punkte in hb2: 1.500000´
         """
 
     def _classes_default(self):
@@ -38,4 +48,5 @@ class StudentMailApp(NbGrader):
                 p, self.extra_args[0], points[p][self.extra_args[0]]))
 
     def send_mail_to(self, adress, message):
+        #TODO send mail
         print("Send mail", adress, message)

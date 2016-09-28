@@ -14,8 +14,17 @@ class StudentResultApp(NbGrader):
     flags = flags
 
     examples = """
-        Here should be an example for studentresult
+        Returns the results for all students an all assignments.
 
+        For example:
+
+            nbgrader studentresult
+
+        prints
+
+            Results:
+            1234567 {'hb2': 1.5, 'ps2': 0, 'ps1': 0, 'ps_test': 0, 'aufg1': 0}
+            7007607 {'hb2': 1.5, 'ps2': 0, 'ps1': 0, 'ps_test': 0, 'aufg1': 0}
         """
 
     def _classes_default(self):
