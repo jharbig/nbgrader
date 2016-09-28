@@ -1,7 +1,8 @@
 from .baseapp import NbGrader
 import json
 
-from .studentapi import init_database, Assignment, SubmittedAssignment, Groupmember
+from .studentapi import init_database, Groupmember, get_assignment_id
+from ..api import SubmittedAssignment
 
 import os
 
@@ -45,8 +46,6 @@ class StudentgradeApp(NbGrader):
 
         """
 
-
-
     def _classes_default(self):
         classes = super(StudentgradeApp, self)._classes_default()
         classes.append(StudentgradeApp)
@@ -68,10 +67,10 @@ class StudentgradeApp(NbGrader):
             for st in id_note:
                 st = str.replace(st, "\n", "")
                 st = str.split(st, " ", 1)
-                assignment_id = self.get_assignment_id(assignment)
-                if len(st) > 1:
+                assignment_id = get_assignment_id(assignment)
+                if len(st) == 2:
                     self.save_identifier(st[0], p["acc"], assignment_id, st[1])
-                elif len(st) > 0:
+                elif len(st) == 1:
                     self.save_identifier(st[0], p["acc"], assignment_id)
         self.session.commit()
         gr = self.session.query(Groupmember).all()
@@ -104,8 +103,6 @@ class StudentgradeApp(NbGrader):
             new_mem = Groupmember(sub_notebook_id=sub_ass.id, groupmember_id=identifier, mail=mail)
             self.session.add(new_mem)
 
-
-
     def get_notepath(self, assignment, root_path):
         """
         :param assignment: assignment name
@@ -131,14 +128,5 @@ class StudentgradeApp(NbGrader):
                     #print("notepath np:", np)
                     res += [np]
         return res
-
-    def get_assignment_id(self, assignment_name):
-        """
-        Database has to be connected with 'init_database'
-        :param assignment_name:
-        :return: assignment id from database
-        """
-        return self.session.query(Assignment.id).filter(Assignment.name == assignment_name).first()[0]
-
 
 

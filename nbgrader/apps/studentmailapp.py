@@ -1,5 +1,5 @@
 from .baseapp import NbGrader
-
+from .studentapi import *
 aliases = {}
 flags = {}
 
@@ -24,13 +24,18 @@ class StudentMailApp(NbGrader):
 
     def start(self):
         super(StudentMailApp, self).start()
-        message = "Hier die Ergebnisse"
-        for adress in self.get_mail_adresses():
-            self.send_mail_to(adress, message)
+        if len(self.extra_args) != 1:
+            self.fail("Assignment id not provided. Usage: nbgrader studentmail assinment_id")
 
-    def get_mail_adresses(self):
-        #TODO get mail adresses and solutions from DB
-        return ["abc@mail.de"]
+        if self.extra_args[0] not in get_assignment_list():
+            self.fail("Assingment id does not exist")
+
+        points = get_student_list_point()
+        mail = get_student_list_mail()
+
+        for p in points:
+            self.send_mail_to(mail[p][self.extra_args[0]], "Matrikel Nr: %s, Punkte in %s: %f" % (
+                p, self.extra_args[0], points[p][self.extra_args[0]]))
 
     def send_mail_to(self, adress, message):
         print("Send mail", adress, message)

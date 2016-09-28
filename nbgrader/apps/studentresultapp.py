@@ -1,4 +1,5 @@
 from .baseapp import NbGrader
+from .studentapi import *
 
 aliases = {}
 flags = {}
@@ -24,6 +25,10 @@ class StudentResultApp(NbGrader):
 
     def start(self):
         super(StudentResultApp, self).start()
-        print("Result")
+        print("Results:")
+        students = get_student_list_point()
+        for p in sorted(students):
+            print(p, students[p])
+
         #TODO return results for all students as JSON
         # (identifier, points_asignment01, points_asignment02, ..., points_sum)
